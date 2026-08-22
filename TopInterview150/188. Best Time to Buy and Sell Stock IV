@@ -1,0 +1,170 @@
+class Solution {
+public:
+    // https://www.youtube.com/watch?v=Pw6lrYANjz4&t=2173s  
+    /*
+    profits[t][d] = maximum profit using at most t transactions
+    during days 0 through d
+    profit[t][d]
+    1. profit[t][d-1] if no txn happened on day d
+    2. prices[d] + max (-prices[x] + profit[t-1][x])    0 <= x < d
+    */
+    
+    // Time: O(nk) Space: O(nk)
+    int maxProfit(int k, vector<int>& prices) {
+        int n = static_cast<int>(prices.size());
+
+        if (n == 0 || k == 0) {
+            return 0;
+        }
+
+        /*
+         * If k >= n/2, transaction limit is effectively irrelevant.
+         *
+         * Why?
+         * In n days, at most n/2 complete buy-sell transactions
+         * can happen.
+         *
+         * So this becomes the unlimited-transactions problem.
+         */
+        if (k >= n / 2) {
+            int totalProfit = 0;
+
+            for (int day = 1; day < n; ++day) {
+                totalProfit += max(0, prices[day] - prices[day - 1]);
+            }
+
+            return totalProfit;
+        }
+        
+        /*
+         * dp[t][day] =
+         * maximum profit using at most t transactions
+         * during days 0 ... day.
+         */
+        vector<vector<int>> dp(k + 1, vector<int>(n, 0));
+
+        for (int transactions = 1; transactions <= k; ++transactions) {
+            /*
+             * Think of this as:
+             *
+             * previous profit - current buying price
+             *
+             * Initially, if we buy on day 0:
+             *
+             * dp[t-1][0] - prices[0]
+             *
+             * dp[t-1][0] is 0.
+             */
+            int bestBuyBalance = dp[transactions-1][0] - prices[0];
+
+            for (int day = 1; day < n; ++day) {
+                /*
+                 * Choice 1:
+                 * Do nothing / don't sell today.
+                 *
+                 * Profit stays:
+                 * dp[t][day - 1]
+                 *
+                 * Choice 2:
+                 * Sell today.
+                 *
+                 * bestBuyBalance already represents
+                 * the best previous effective buying state.
+                 */
+                dp[transactions][day] = max(dp[transactions][day - 1], bestBuyBalance + prices[day]);
+
+                /*
+                 * Update the best possible buy state
+                 * for future selling days.
+                 *
+                 * If we buy today:
+                 *
+                 * dp[t-1][day] = profit already earned
+                 *               using at most t-1 transactions
+                 *
+                 * Then subtract today's price.
+                 */
+                bestBuyBalance = max(bestBuyBalance, dp[transactions - 1][day] - prices[day]);
+            }
+        }
+
+        return dp[k][n - 1];
+    }
+    
+    // Time: O(nk) Space: O(n)
+    int maxProfit_1(int k, vector<int>& prices) {
+        int n = static_cast<int>(prices.size());
+
+        if (n == 0 || k == 0) {
+            return 0;
+        }
+
+        if (k >= n / 2) {
+            int profit = 0;
+
+            for (int i = 1; i < n; ++i) {
+                profit += max(0, prices[i] - prices[i - 1]);
+            }
+
+            return profit;
+        }
+
+        vector<int> previous(n, 0);
+        vector<int> current(n, 0);
+
+        for (int transaction = 1; transaction <= k; ++transaction) {
+
+            int bestBuyBalance = -prices[0];
+            current[0] = 0;
+
+            for (int day = 1; day < n; ++day) {
+                current[day] =
+                    max(
+                        current[day - 1],
+                        bestBuyBalance + prices[day]
+                    );
+
+                bestBuyBalance =
+                    max(
+                        bestBuyBalance,
+                        previous[day] - prices[day]
+                    );
+            }
+
+            previous.swap(current);
+        }
+
+        return previous[n - 1];
+    }
+    
+    // Time: O(nk) Space: O(nk)
+    int maxProfit_r(int k, vector<int>& prices) {
+        int maxProfit=0;
+        int n = prices.size();
+        
+        if (n == 0) return 0;
+        
+        if (k>n/2) {
+            for(int i=1; i<prices.size(); i++)
+                maxProfit += max(prices[i]-prices[i-1], 0);
+            return maxProfit;
+        }
+        // mem[bought or not][#txn][#days]
+        vector<vector<vector<int>>> mem(2, vector<vector<int>>(k+1, vector<int>(n, -1)));
+        return recursion(prices, 0, k, false, mem);
+    }
+    
+    int recursion(vector<int>& prices, int pos, int txn, bool bought, vector<vector<vector<int>>> &mem) {
+        if (pos >= prices.size() || txn == 0) return 0;
+        if (mem[bought][txn][pos] != -1) return mem[bought][txn][pos];
+        
+        int res = recursion(prices, pos+1, txn, bought, mem); // NO-OP
+        if (bought) {
+            res = max(res, recursion(prices, pos+1, txn-1, false, mem) + prices[pos]); // SELL
+        } else {
+            res = max(res, recursion(prices, pos+1, txn, true, mem) - prices[pos]); // BUY
+        }
+        
+        return mem[bought][txn][pos] = res;  
+    }
+};
