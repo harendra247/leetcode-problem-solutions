@@ -1,0 +1,17 @@
+class Solution {
+public:
+    // Time: O(n) Space: O(m+n) n is size of pattern, m is unique chars in pattern
+    bool wordPattern(string pattern, string s) {
+        unordered_map<char, int> p2i;
+        unordered_map<string, int> w2i;
+        istringstream in(s);
+        int i = 0, n = pattern.size();
+        for (string word; in >> word; ++i) {
+            if (i == n || p2i[pattern[i]] != w2i[word])
+                return false;
+            p2i[pattern[i]] = i + 1;
+            w2i[word] = i + 1;
+        }
+        return i == n;  
+    }
+};
